@@ -1,0 +1,119 @@
+
+# coding: utf-8
+
+# In[2]:
+
+# Feature 01 implementation
+# by Lasith Adhikari
+
+
+import numpy as np
+import pandas as pd
+import csv
+import os, errno
+import sys
+import time
+
+degree 						  = int(sys.argv[-4])  # e.g.: degree = 1: 1st degree friendship, degree = 4: 4th degree, etc. 
+filename_history     = sys.argv[-3]
+filename_payments = sys.argv[-2]
+output_file  				  = sys.argv[-1]
+
+
+
+def IsdegNfriend(sender, reciver, deg1friends, oldlist):
+    newList=[]
+    for i in oldlist:
+        if reciver in deg1friends[i]:
+            return True, newList
+        else:
+            newList = newList + ([x for x in deg1friends[i] if x != sender])   
+    return False, np.unique(list(set(newList) - set(oldlist)))
+    
+    
+
+
+
+start_time = time.time()
+
+maxInt = sys.maxsize
+csv.field_size_limit(sys.maxsize)
+
+def silentremove(filename):
+    try:
+        os.remove(filename)
+    except OSError as e: # 
+        if e.errno != errno.ENOENT: # errno.ENOENT = no such file or directory
+            raise # re-raise exception if a different error occured
+
+#output_file = 'output1.txt'
+silentremove(output_file)
+deg1_friends = {}
+
+# read new transcation sender and receiver id row by row
+#filename_payments = 'stream_payment.txt' #'stream_payment.csv'     # ids with new transcations to be done
+#filename_history  = 'batch_payment.txt'    #'batch_payment.csv'    # historical transcations info file
+with open(filename_payments,'rt', encoding='ISO-8859-1') as csvfile_pay:
+    datareader_pay = csv.reader(csvfile_pay, delimiter=',')
+    next(csvfile_pay)
+    for row_pay in datareader_pay:
+        id1_send_pay = int(row_pay[1]) # read sender id
+        id2_rece_pay = int(row_pay[2]) # read receiver id
+        
+
+        ###### for the given sender, find his/her friends  #####
+        
+        # creating dictionary to hold deg-1 friends
+        deg1_friends[id1_send_pay] = []
+        
+        trust = False;
+       
+        with open(filename_history,'rt', encoding='ISO-8859-1') as csvfile_hist:
+            datareader_hist = csv.reader(csvfile_hist, delimiter=',')
+            next(csvfile_hist)
+            try:
+                for row_hist in datareader_hist: 
+                    #count = count+1
+                    id1_send_hist = int(row_hist[1]) # read sender id
+                    id2_rece_hist = int(row_hist[2]) # read receiver id
+                    
+                    if not id1_send_hist in deg1_friends:
+                        deg1_friends[id1_send_hist] = []
+                    if not id2_rece_hist in deg1_friends:
+                        deg1_friends[id2_rece_hist] = []
+                    
+                    deg1_friends[id1_send_hist].append(id2_rece_hist)
+                    deg1_friends[id2_rece_hist].append(id1_send_hist)
+                        
+
+                    
+            except IndexError as e:
+                if e.args and e.args[0].startswith('field larger than field limit'):
+                    raise FieldSizeLimitError(csv.field_size_limit())
+                else:
+                    raise
+                    
+            #print(deg1_friends)
+            
+        if id2_rece_pay in deg1_friends[id1_send_pay]:
+            trust = True
+        else:
+            FriList = deg1_friends[id1_send_pay]
+            for i in range(1,degree):
+                isFriend, degNFri = IsdegNfriend(id1_send_pay, id2_rece_pay, deg1_friends, FriList)
+                if isFriend == True:
+                    trust = True
+                    break
+                else:
+                    FriList = degNFri
+                
+            
+        with open(output_file, "a") as myfile:
+            if trust:
+                myfile.write("trusted\n")
+            else:
+                myfile.write("unverified\n")
+        deg1_friends = {}
+print("--- %s seconds ---" % (time.time() - start_time))
+print('Done! Please check the output1.txt for the results')
+
