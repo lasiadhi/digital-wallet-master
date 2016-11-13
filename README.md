@@ -2,7 +2,7 @@
 
 This PayMo algorithm is implemented using Python. My Python code is worked fine in my machine and tested for different test cases. In particular, it passed all three test cases in the insight test suit. 
 
-## Following Python packages/modules need to be installed in order run my code: 
+## Following Python packages/modules need to be installed in order run this code: 
 
 1. numpy
 2. csv   
